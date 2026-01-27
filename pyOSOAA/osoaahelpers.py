@@ -1,21 +1,21 @@
 # coding=utf-8
 
 import numpy as np
-from scipy.interpolate import interp1d
-from scipy.optimize import curve_fit
+# from scipy.interpolate import interp1d
+# from scipy.optimize import curve_fit
 
 
 def fourier3(x, a0, a1, a2):
     return a0 + a1 * np.cos(np.deg2rad(x)) + a2 * np.cos(np.deg2rad(2 * x))
 
 
-def first_three_coefficients_in_the_Fourier_cosine_series(x, y):
-    popt, pcov = curve_fit(
-        fourier3,
-        x,
-        y,
-    )
-    return popt
+# def first_three_coefficients_in_the_Fourier_cosine_series(x, y):
+#     popt, pcov = curve_fit(
+#         fourier3,
+#         x,
+#         y,
+#     )
+#     return popt
 
 
 def ConfigureOcean(s, ocean_type="black"):
@@ -307,59 +307,59 @@ def RunAngles(
             # Convert the output to a directory
             results = vars(s.outputs.vsvza)
             # We interpolte the values and add it to a numpy array
-            f = interp1d(results["vza"], results[output])
+            tempval = np.interp(thetav, results["vza"], results[output])
             # We reshape the array to make the asignement
-            tempval = f(thetav).reshape(thetav.size, 1)
+            # tempval = f(thetav).reshape(thetav.size, 1)
             values[:, idxthetas, idxphi] = tempval[:]
 
     return values
 
 
-def GenRayleighLUT(s, wavelength, wind_speed, senz, solz, phi):
-    nwind_ray = wind_speed.size
-    nsun_ray = solz.size
-    norder_ray = 3
-    nrad_ray = senz.size
-    i_ray = np.zeros((nwind_ray, nsun_ray, norder_ray, nrad_ray))
-    q_ray = np.zeros((nwind_ray, nsun_ray, norder_ray, nrad_ray))
-    u_ray = np.zeros((nwind_ray, nsun_ray, norder_ray, nrad_ray))
-    for idxws, valws in enumerate(wind_speed):
+# def GenRayleighLUT(s, wavelength, wind_speed, senz, solz, phi):
+#     nwind_ray = wind_speed.size
+#     nsun_ray = solz.size
+#     norder_ray = 3
+#     nrad_ray = senz.size
+#     i_ray = np.zeros((nwind_ray, nsun_ray, norder_ray, nrad_ray))
+#     q_ray = np.zeros((nwind_ray, nsun_ray, norder_ray, nrad_ray))
+#     u_ray = np.zeros((nwind_ray, nsun_ray, norder_ray, nrad_ray))
+#     for idxws, valws in enumerate(wind_speed):
 
-        # rayleigh
-        s.ap.SetPressure(pressure=1013.25)
-        # s.ap.SetMot(taur)
+#         # rayleigh
+#         s.ap.SetPressure(pressure=1013.25)
+#         # s.ap.SetMot(taur)
 
-        # aerosol
-        s.aer.aotref = 0
+#         # aerosol
+#         s.aer.aotref = 0
 
-        # Sea surface configuration
-        s.sea.wind = valws
+#         # Sea surface configuration
+#         s.sea.wind = valws
 
-        # config ocean
-        s = ConfigureOcean(s, ocean_type="black")
+#         # config ocean
+#         s = ConfigureOcean(s, ocean_type="black")
 
-        # Top of Atmosphere
-        s.view.level = 1
+#         # Top of Atmosphere
+#         s.view.level = 1
 
-        toa = RunAngles(
-            s, wavelength=wavelength / 1000, thetav=senz, thetas=solz, phi=phi
-        )
+#         toa = RunAngles(
+#             s, wavelength=wavelength / 1000, thetav=senz, thetas=solz, phi=phi
+#         )
 
-        glint = RunAngles(
-            s,
-            wavelength=wavelength / 1000,
-            thetav=senz,
-            thetas=solz,
-            phi=phi,
-            fatm_null=True,
-        )
+#         glint = RunAngles(
+#             s,
+#             wavelength=wavelength / 1000,
+#             thetav=senz,
+#             thetas=solz,
+#             phi=phi,
+#             fatm_null=True,
+#         )
 
-        for idxthetav, valthetav in enumerate(senz):
-            for idxthetas, valthetas in enumerate(solz):
-                a = first_three_coefficients_in_the_Fourier_cosine_series(
-                    phi, toa[idxthetav, idxthetas, :] - glint[idxthetav, idxthetas, :]
-                )
+#         for idxthetav, valthetav in enumerate(senz):
+#             for idxthetas, valthetas in enumerate(solz):
+#                 a = first_three_coefficients_in_the_Fourier_cosine_series(
+#                     phi, toa[idxthetav, idxthetas, :] - glint[idxthetav, idxthetas, :]
+#                 )
 
-                i_ray[idxws, idxthetas, :, idxthetav] = a
+#                 i_ray[idxws, idxthetas, :, idxthetav] = a
 
-    return i_ray, q_ray, u_ray
+#     return i_ray, q_ray, u_ray
