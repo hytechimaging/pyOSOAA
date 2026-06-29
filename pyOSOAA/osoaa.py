@@ -1,14 +1,14 @@
 # coding=utf-8
 
+import hashlib
 import os
+import platform
 import random
 import shutil
 import string
 from io import open
-from .outputs import OUTPUTS
-import hashlib
-import platform
 
+from .outputs import OUTPUTS
 
 class SEA(object):
     """This is the SEA class which defines the interfaces at the bottom of the
@@ -491,7 +491,7 @@ class SED(object):
         self.sm = None
         self.tm = None
 
-    def SetPrimaryMode(self, mrwa=1.2, miwa=0, slope=-4, rmin=None, rmax=None, rate=1):
+    def SetPrimaryMode(self, mrwa=1.2, miwa=0, slope=4, rmin=None, rmax=None, rate=1):
         """Sets the primary mode using Junge's law
         mrwa        Real part of the refractive index for mineral-like
                     particles at the simulation wavelength: main mode
@@ -1060,17 +1060,26 @@ class OSOAA(object):
         self.view = VIEW()
         self.logfile = logfile
 
-    def run(self, root=None, forcerun=False):
+    def run(self, root=None, forcerun=False, fatm_null=False):
         """Run OSOAA. If no root directory is given for OSOAA the one
         configured by the system is used.
 
         If forcerun is set to true the simulation will be run even
         if it exists.
+        
+        fatm_null is True, run OSOAA_MAIN_FATM_NULL.exe.
         """
 
         if root is not None:
             self.root = root
-        sc = os.path.join(self.root, "exe", "OSOAA_MAIN.exe")
+            
+        if fatm_null:
+            exe = "OSOAA_MAIN_FATM_NULL.exe"
+        else:
+            exe = "OSOAA_MAIN.exe"
+
+        sc = os.path.join(self.root, "exe", exe)
+        
         #
         #   Angles calculation parameters :
         #   --------------------------------
