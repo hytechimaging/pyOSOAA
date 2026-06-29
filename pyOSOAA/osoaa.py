@@ -10,6 +10,7 @@ from io import open
 
 from .outputs import OUTPUTS
 
+
 class SEA(object):
     """This is the SEA class which defines the interfaces at the bottom of the
     ocean and the interface with the air."""
@@ -426,7 +427,7 @@ class SED(object):
     class JD(object):
         """This is a Junge distribution for the different models."""
 
-        def __init__(self, mrwa, miwa, slope, rmin, rmax, rate):
+        def __init__(self, mrwa=1.5, miwa=0.0, slope=4.0, rmin=0.01, rmax=200, rate=1.0):
             """Init function for the Junges distribution.
             mrwa        Real part of the refractive index for mineral-like
                         particles at the simulation wavelength: main mode
@@ -487,11 +488,11 @@ class SED(object):
         """
 
         self.csed = csed
-        self.jd = None
+        self.jd = self.JD()
         self.sm = None
         self.tm = None
 
-    def SetPrimaryMode(self, mrwa=1.2, miwa=0, slope=4, rmin=None, rmax=None, rate=1):
+    def SetPrimaryMode(self, mrwa=1.2, miwa=0, slope=4, rmin=0.01, rmax=200, rate=1):
         """Sets the primary mode using Junge's law
         mrwa        Real part of the refractive index for mineral-like
                     particles at the simulation wavelength: main mode
@@ -1066,20 +1067,19 @@ class OSOAA(object):
 
         If forcerun is set to true the simulation will be run even
         if it exists.
-        
+
         fatm_null is True, run OSOAA_MAIN_FATM_NULL.exe.
         """
 
         if root is not None:
             self.root = root
-            
+
         if fatm_null:
             exe = "OSOAA_MAIN_FATM_NULL.exe"
         else:
             exe = "OSOAA_MAIN.exe"
 
         sc = os.path.join(self.root, "exe", exe)
-        
         #
         #   Angles calculation parameters :
         #   --------------------------------
