@@ -1,14 +1,13 @@
 # coding=utf-8
 
-import hashlib
 import os
-import platform
 import random
 import shutil
 import string
 from io import open
-
 from .outputs import OUTPUTS
+import hashlib
+import platform
 
 
 class SEA(object):
@@ -169,6 +168,16 @@ class RESULTS(object):
                 working folder) : ==> Output radiance field versus the
                 depth (or altitude) (for the given relative azimuth angle
                 and given viewing zenith angle).
+    hydiop      Filename of the ascii file resulting from SOS computations
+                (defined without directory tree ==> this file will be
+                located in the sub-directory Advanced_outputs of the
+                working folder) : ==> Advanced output of the IOPs  of
+                hydrosols.
+    aeriop      Filename of the ascii file resulting from SOS computations
+                (defined without directory tree ==> this file will be
+                located in the sub-directory Advanced_outputs of the
+                working folder) : ==> Advanced output of the IOPs  of
+                aerosols.
     """
 
     profileatm = None
@@ -184,6 +193,8 @@ class RESULTS(object):
     advdown = None
     advphi = None
     vsz = "resfile_vsz.txt"
+    hydiop = None
+    aeriop = None
 
 
 class DIRMIE(object):
@@ -211,14 +222,16 @@ class DIRMIE(object):
 class GP(object):
     """Gaussian profile class definition."""
 
-    def __init__(self, chlbg, deep, width):
+    def __init__(self, chlbg, chlzmax, deep, width):
         """Init function for the gaussian profiles
         chlbg       Constant biomass background (mg/m3)
+        chlzmax     Maximum value of chlorophyll concentration, at depth deep (mg/m3)
         deep        Maximum deep of the gaussian chlorophyll profile (m)
         width       Peak width of the gaussian chlorophyll profile (m)
         """
 
         self.chlbg = chlbg
+        self.chlzmax = chlzmax
         self.deep = deep
         self.width = width
 
@@ -366,7 +379,7 @@ class PHYTO(object):
         self.tm = self.LND(mrwa, miwa, sdradius, sdvar, rate)
 
     def SetProfilType(
-        self, profiltype, chlbg=None, deep=None, width=None, userfile=None
+        self, profiltype, chlbg=None, chlzmax=None, deep=None, width=None, userfile=None
     ):
         """This method sets the profile type for the Phytoplanckton
         distribution. This also configures the parameters for each
@@ -394,7 +407,7 @@ class PHYTO(object):
 
         if profiltype == self.Gaussian:
             # We confifigure the gaussian profile
-            self.gp = GP(chlbg, deep, width)
+            self.gp = GP(chlbg, chlzmax, deep, width)
 
         elif profiltype == self.UserDefined:
             # We configure the user defined profile
@@ -413,9 +426,7 @@ class SED(object):
     class JD(object):
         """This is a Junge distribution for the different models."""
 
-        def __init__(
-            self, mrwa=1.15, miwa=0.0, slope=4.0, rmin=0.01, rmax=200, rate=1.0
-        ):
+        def __init__(self, mrwa, miwa, slope, rmin, rmax, rate):
             """Init function for the Junges distribution.
             mrwa        Real part of the refractive index for mineral-like
                         particles at the simulation wavelength: main mode
@@ -476,11 +487,11 @@ class SED(object):
         """
 
         self.csed = csed
-        self.jd = self.JD()
+        self.jd = None
         self.sm = None
         self.tm = None
 
-    def SetPrimaryMode(self, mrwa=1.2, miwa=0, slope=4, rmin=0.01, rmax=200, rate=1):
+    def SetPrimaryMode(self, mrwa=1.2, miwa=0, slope=-4, rmin=None, rmax=None, rate=1):
         """Sets the primary mode using Junge's law
         mrwa        Real part of the refractive index for mineral-like
                     particles at the simulation wavelength: main mode
@@ -918,7 +929,7 @@ class HYD(object):
     of the sea."""
 
     def __init__(self, model=1, extdata=None):
-        """Init method for the aerosol componentes class
+        """Init method for the aerosol components class
         model       Type of hydrosol characterization
                         1 : From size distribution models.
                         2 : Use of external phase functions
@@ -1003,7 +1014,7 @@ class VIEW(object):
 
 
 class OSOAA(object):
-    """This class creates the OSOAA objecto which configures and runs the
+    """This class creates the OSOAA object which configures and runs the
     simulation"""
 
     def __init__(self, wa=0.440, resroot=None, logfile=None, cleanup=False):
@@ -1049,25 +1060,17 @@ class OSOAA(object):
         self.view = VIEW()
         self.logfile = logfile
 
-    def run(self, root=None, forcerun=False, fatm_null=False):
+    def run(self, root=None, forcerun=False):
         """Run OSOAA. If no root directory is given for OSOAA the one
         configured by the system is used.
 
         If forcerun is set to true the simulation will be run even
         if it exists.
-
-        fatm_null is True, run OSOAA_MAIN_FATM_NULL.exe.
         """
 
         if root is not None:
             self.root = root
-
-        if fatm_null:
-            exe = "OSOAA_MAIN_FATM_NULL.exe"
-        else:
-            exe = "OSOAA_MAIN.exe"
-
-        sc = os.path.join(self.root, "exe", exe)
+        sc = os.path.join(self.root, "exe", "OSOAA_MAIN.exe")
         #
         #   Angles calculation parameters :
         #   --------------------------------
@@ -1159,6 +1162,7 @@ class OSOAA(object):
             sc = sc + "\n" + "-PHYTO.ProfilType {} \\".format(self.phyto.profiltype)
         if self.phyto.profiltype == 2:
             sc = sc + "\n" + "-PHYTO.GP.Chlbg {} \\".format(self.phyto.gp.chlbg)
+            sc = sc + "\n" + "-PHYTO.GP.Chlzmax {} \\".format(self.phyto.gp.chlzmax)
             sc = sc + "\n" + "-PHYTO.GP.Deep {} \\".format(self.phyto.gp.deep)
             sc = sc + "\n" + "-PHYTO.GP.Width {} \\".format(self.phyto.gp.width)
         if self.phyto.profiltype == 3:
@@ -1175,6 +1179,8 @@ class OSOAA(object):
         #
         #   Aerosols parameters :
         #   ---------------------
+        if self.results.aeriop is not None:
+            sc = sc + "\n" + "-AER.ResFile.IOP {} \\".format(self.results.aeriop)
         if self.results.aer is not None:
             sc = sc + "\n" + "-AER.ResFile {} \\".format(self.results.aer)
         if self.log.aer is not None:
@@ -1243,6 +1249,8 @@ class OSOAA(object):
         #
         #   Hydrosols parameters :
         #   ---------------------
+        if self.results.hydiop is not None:
+            sc = sc + "\n" + "-HYD.ResFile.IOP {} \\".format(self.results.hydiop)
         if self.results.phyto is not None:
             sc = sc + "\n" + "-PHYTO.ResFile {} \\".format(self.results.phyto)
         if self.results.mlp is not None:
@@ -1381,9 +1389,9 @@ class OSOAA(object):
             if forcerun:
                 os.system(self.resroot + "/script.bat")
         else:
-            # Run script with ksh
+            # Run script with bash
             if forcerun:
-                os.system("ksh " + self.resroot + "/script.kzh")
+                os.system("bash " + self.resroot + "/script.kzh")
 
         # read OUTPUTS
         self.outputs = OUTPUTS(self.resroot, self.results)
